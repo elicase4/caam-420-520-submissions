@@ -1,0 +1,176 @@
+\documentclass[11pt]{article}
+
+\usepackage[lmargin=0.75in, rmargin=1in, tmargin=1.25in, bmargin=1in]{geometry}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage[labelsep=period]{caption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{lastpage}
+\usepackage{listings}
+\usepackage[svgnames]{xcolor}
+
+% For formatting C++ code listings ---------------------------
+\lstdefinestyle{customCpp}{
+    language=C++,
+    keywordstyle=\color{RoyalBlue},
+    basicstyle=\footnotesize\ttfamily,
+    commentstyle=\color{Green}\ttfamily,
+    rulecolor=\color{black},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame = tb,
+    belowcaptionskip=5pt,
+    belowskip=3em,
+    gobble=10,
+}
+
+% For turning enumerated lists into Problem titles --------------
+\renewcommand{\labelenumi}{\textbf{Problem \arabic{enumi}}}
+\renewcommand{\labelenumii}{(\alph{enumii})}
+
+% Enumerated list indents:
+% Problems:    [leftmargin=0.9in]
+% Subproblems: [leftmargin=0.3in]
+
+
+% Document Details ----------------------------------------------
+\author{Eli Case}
+\title{CAAM 420/520 -- Homework 3}
+\date{March, 10, 2023}
+\makeatletter
+
+
+% Setup headers -------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{} % Clear the headers and footers
+\lhead{\@author}
+\chead{\@title}
+\rhead{\@date}
+\cfoot{Page \thepage\ of \pageref{LastPage}}
+\setlength{\headheight}{15pt}
+\setlength{\headsep}{20pt}
+
+\fancypagestyle{plain}{
+	\fancyhf{}
+	\setlength{\headheight}{15pt}
+	\setlength{\headsep}{0pt}
+	\renewcommand{\headrulewidth}{0pt}
+	\cfoot{\vspace{2mm}Page \thepage\ of \pageref{LastPage}}
+}
+
+
+\begin{document}
+\flushleft
+\thispagestyle{plain}
+To: Christina Taylor
+
+From: \@author
+
+Date: \@date
+
+Subject: \@title
+
+\makeatother
+\medskip
+\hrule
+\medskip
+
+\begin{enumerate}[leftmargin=0.9in]
+\item % Problem 1
+
+   \begin{enumerate}[leftmargin=0.3in]
+       \item
+           Nodes at a given level in the function tree can be processed at the same time. For example, we can begin traversing the function tree in Figure 1 at level 0. Once we reach the child nodes of level 0 at level 1, we can process the child nodes of level 1 simultaneously, as processing each child node is an independent operation.
+       \item
+           In evaluating the function tree, synchronization is required after the subtree for a given operator node has been processed. For example, Before evaluating the multiplication node at level 1, we must evaluate the subtree for the addition node at level 2 fist, for the function tree given in Figure 1.
+       \setcounter{enumii}{3}
+       \item
+           To find the parallel time complexity of evaluating the sun function using a function tree, we can make start by making the following observations. 
+           \begin{enumerate}
+               \item If the number of nodes, $n$, in a given layer, $L$, is less than the number of total threads, $N_T$, then the time complexity to process that layer is $\mathcal{O}(1)$.
+               \item If the number of nodes, $n$, in a given layer, $L$, is larger than or equal to the number of total threads, $N_T$, then the time complexity to process that layer is $\mathcal{O}(\frac{2^L}{N_T})$.
+           \end{enumerate}
+           Now, given that the number of threads is a power of $2$, as $N_T = 2^T$, and that $L=T$, when the number of nodes in a given layer equal the number of threads, we have the following equation for the time complexity of processing a given layer in parallel, {\fontfamily{cmtt}\selectfont time\_layer}, in the function tree.
+           \begin{equation} \label{eq:1}
+               \text{{\fontfamily{cmtt}\selectfont time\_layer}}  = \begin{cases}
+                   \mathcal{O}(1) & \text{$L < T$} \\
+                   \mathcal{O}(\frac{2^L}{N_T}) & \text{$L \geq T$}
+               \end{cases}
+           \end{equation}
+           Subsequently, we can compute the total time complexity of processing the function tree, {\fontfamily{cmtt}\selectfont time\_tree}, by adding the time complexity for each layer, as given in Equation \ref{eq:1}.
+           \begin{equation} \label{eq:2}
+               \text{{\fontfamily{cmtt}\selectfont time\_tree}} = \mathcal{O}\bigg(\sum_{i = 0}^{T - 1} 1 + \frac{1}{N_T}\sum_{i = T}^{L_{\text{max}}} 2^i \bigg)
+           \end{equation}
+           We can rewrite Equation \ref{eq:2}, in terms of the variables of interest, $N_T$ and $n$, with the following formulas.
+           \begin{align*}
+               T &= log_2(N_T) \\
+               n &= 2m - 1 \\ 
+               L_{max} &= log_2(m)
+           \end{align*}
+           Rewriting Equation \ref{eq:2} and simplifying, we have the following equation for {\fontfamily{cmtt}\selectfont time\_tree}.
+           \begin{equation} \label{eq:3}
+               \text{{\fontfamily{cmtt}\selectfont time\_tree}} = \mathcal{O}\bigg(log_2(N_T) +  \frac{1}{N_T}\sum_{i = log_2(N_T)}^{log_2(\frac{n + 1}{2})} 2^i \bigg)
+           \end{equation}
+           Now, we can simplify Equation \ref{eq:3} by rewriting the finite sum of the geometric series. We have the following formula for the sum of a finite geometric series, $S_n$ given by the following formula.
+           \begin{equation} \label{eq:4}
+               S_n = \sum_{i = 0}^{n - 1} r^i = \frac{r^n - 1}{r - 1}, \quad \text{$r > 1$}
+           \end{equation}
+           We would like to rewrite the following finite sum geometric of a geometric series.
+           \begin{equation} \label{eq:5}
+               \sum_{i = log_2(N_T)}^{log_2(\frac{n + 1}{2})} 2^i
+           \end{equation}
+           In order to apply Equation \ref{eq:4}, we split the finite sum of a geometric series given in Equation \ref{eq:5} as follows.
+           \begin{equation} \label{eq:6}
+               \sum_{i = 0}^{log_2(\frac{n + 1}{2})} 2^i - \sum_{i = 0}^{log_2(N_T) - 1} 2^i 
+           \end{equation}
+           Now, using Equation \ref{eq:4}, we rewrite Equation \ref{eq:6}.
+           \begin{align*}
+               \frac{2^{log_2(\frac{n + 1}{2}) + 1} - 1}{2 - 1} &- \frac{2^{log_2(N_T)} - 1}{2 - 1} \\
+               2^{log_2(\frac{n + 1}{2}) + log_2(2)} &- 2^{log_2(N_T)} \\
+               2^{log_2(n + 1)} &- 2^{log_2(N_T)} \\
+               n + 1 &- N_T 
+           \end{align*}
+           Thus, we can now simplify Equation \ref{eq:3}.
+           \begin{align*}
+               \text{{\fontfamily{cmtt}\selectfont time\_tree}} &= \mathcal{O}\bigg(log_2(N_T) + \frac{1}{N_T}\big(n + 1 - N_T \big) \bigg) \\
+               \text{{\fontfamily{cmtt}\selectfont time\_tree}} &= \mathcal{O}\bigg(log_2(N_T) + \frac{n + 1}{N_T} - 1 \bigg)
+           \end{align*}
+           Finally, we obtain the time complexity for processing the function tree in parallel, as shown below.
+           \begin{equation} \label{eq:7}
+               \mathcal{O}\bigg(log_2(N_T) + \frac{n + 1}{N_T} - 1 \bigg)
+           \end{equation}
+       \item
+           We were given that the time complexity for computing the sum with a parallel for loop was as follows.
+           \begin{equation*}
+               \mathcal{O}\bigg( \frac{m}{N_T} \bigg)
+           \end{equation*}
+           Rewriting the above formula in terms of $n$, we obtain the following time complexity.
+           \begin{equation} \label{eq:8}
+               \mathcal{O}\bigg( \frac{n + 1}{2N_T} \bigg)
+           \end{equation}
+           We can determine when the parallel for loop implementation is slower than the function tree implementation in parallel by solving the following inequality.
+           \begin{equation} \label{eq:9}
+               \frac{n + 1}{2N_T} > log_2(N_T) + \frac{n + 1}{N_T} - 1
+           \end{equation}
+           Now, we simplify the inequality given in Equation \ref{eq:9} as follows.
+           \begin{equation} \label{eq:10}
+               log_2(N_T) + \frac{n+1}{2N_T} < 1
+           \end{equation}
+           If we consider the smallest function tree, $n=3$, and only one thread, $N_T = 1$, it can be seen that Inequality \ref{eq:10} is not satisfied. As a result, the function tree implementation of evaluating the sum function is always slower than the parallel for loop implementation, in both serial and parallel.  
+
+   \end{enumerate} % End of Problem 1 subpoints
+
+\end{enumerate} % End of Problems
+
+\end{document}

@@ -1,0 +1,16 @@
+4 # The problem
+
+4 4 # the matrix size: n, m
+# the matrix:
+1 0 0 0 
+0 1 0 0
+0 0 1 0
+0 0 0 1
+
+4 # the vector size
+
+# the vector entries
+1
+2
+3
+4
