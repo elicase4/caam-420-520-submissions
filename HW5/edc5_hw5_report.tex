@@ -47,7 +47,7 @@
 % Document Details ----------------------------------------------
 \author{Eli Case}
 \title{CAAM 420/520 -- Homework 5}
-\date{April 21, 2023}
+\date{April 25, 2023}
 \makeatletter
 
 
@@ -60,6 +60,8 @@
 \cfoot{Page \thepage\ of \pageref{LastPage}}
 \setlength{\headheight}{15pt}
 \setlength{\headsep}{20pt}
+\usepackage{float}
+\restylefloat{table}
 
 \fancypagestyle{plain}{
 	\fancyhf{}
@@ -87,11 +89,50 @@ Subject: \@title
 \medskip
 
 \begin{enumerate}[leftmargin=0.9in]
-\item % Problem 1
+   \setcounter{enumi}{1}
+   
+   \item % Problem 2
 
-   \begin{enumerate}[leftmargin=0.3in]
-   \end{enumerate} % End of Problem 1 subpoints
+       Table \ref{tab:1} gives the performance statistics for each implementation.
 
+       \begin{table}[hb!]
+           \centering
+           \begin{tabular}{|c| c c c |}
+               \hline
+               Setup: & Block & Wrapped & Line \\
+               \hline \hline
+               Elements/Thread & $1$ & $N$ & \text{{\fontfamily{cmtt}\selectfont n\_rows}} \\
+               Blocks/SM (thread-based) & $2$ & $\frac{64}{N}$ & $64$ \\
+               Global Memory Transactions (per Block) & $32$ & $N$ & $1$ \\
+               Global Memory Transactions (Entire Grid) & $ 32 (\text{{\fontfamily{cmtt}\selectfont N\_rows}}) (\text{{\fontfamily{cmtt}\selectfont N\_cols}}) $ & $ (\text{{\fontfamily{cmtt}\selectfont n\_rows}}) (\text{{\fontfamily{cmtt}\selectfont N\_cols}}) $ & $ (\text{{\fontfamily{cmtt}\selectfont n\_rows}}) (\text{{\fontfamily{cmtt}\selectfont N\_cols}}) $  \\
+               \hline
+           \end{tabular}
+           \caption{Performance Statistics for Each Implementation}
+           \label{tab:1}
+       \end{table}
+
+
+    \item % Problem 3
+        We have $64$ kB per SM. Since a float is $4$ bytes of data, we can process $16,000$ floats per SM.
+        \begin{enumerate}
+            \item 7 blocks/SM 
+            \item The most blocks/SM is $166$ for $N = 1$. The least blocks/SM is $1$ for $N = 249$.  
+            \item The largest value is $\text{{\fontfamily{cmtt}\selectfont n\_rows}} = 249$. 
+        \end{enumerate}
+
+    \item % Problem 4
+        \begin{enumerate}
+            \item The kernel would use 400 thread blocks.
+            \item The least number of thread blocks the kernel would use is 10 for $N = 40$. The most number of thread blocks is 12,800 for $N = 1$.
+            \item The kernel would use 12,800 thread blocks.
+            \item If two kernels need to be launched concurrently, the Line setup and Wrapped Line setup are most likely to allow two kernels to be run simultaneously. This is because these setups require less SMs than the Block setup because they have grids with larger blocks that request less SMs.
+            \item If the GPU was upgraded to have more SMs, the Block setup and the Wrapped Line setup can achieve the biggest improvement in concurrency and runtime. This is because these setups have grids that can be configured to have smaller block sizes that can request more SMs.
+            \item If the Wrapped Line setup is implemented with kernels invoked simultaneously, the factors necessary to consider for choosing an appropriate value of $N$ would be as follows.
+                \begin{enumerate}
+                    \item How small $N$ can be so that there are enough SMs. If we choose an $N$ that is too small, there will be too large of a number of blocks launched to invoke kernels concurrently. With too many thread locks, there will be a shortage of SMs for the parallelism to be efficient or possible for concurrent kernels. Also, if we launch too many thread blocks, there may be a sufficient amount of SMs for efficient parallelism, but too many reads/write to global memory per block for efficient parallelism. Thus, we have a restriction on the minimum value of $N$ so that enough SMs will be available for simultaneous kernel invocation.
+                    \item How large $N$ is so that the block is sized appropriately for a SM. If we choose an $N$ too large, the block size may be too large to process one block per SM. This restriction largely has to do with the amount of threads available per SM. Additionally, block sizes that are too large can leave idle workers if SMs are available but the problem was not properly divided to utilize all of the SMs because of a larger than optimal block size. This, we would like a $N$ that is not too large so that all the SMs may be utilized in the case of a simultaneous kernel invocation.
+                \end{enumerate}
+        \end{enumerate}
 \end{enumerate} % End of Problems
 
 \end{document}

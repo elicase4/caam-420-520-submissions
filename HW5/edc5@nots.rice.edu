@@ -6,41 +6,22 @@ const int N_cols = n_cols / 32;
 
 const int N = 64;
 
-__global__ void matrix_scale_wrapped(float* A, float* B, float* D, const int n_rows, const int n_cols, const int N) {
-    // Shared memory for D
-    extern __shared__ float D_shared[];
-    
-    // Compute indices
-    int col = threadIdx.x + (blockDim.x*blockIdx.x);
-    int row = blockDim.y*blockIdx.y;
-    int start_idx = col + n_cols*row;
-
-    // Read from shared memory
-    for (int i = 0; i < N; i++) {
-        D_shared[col] = D[col + i];
-    }
-
-    // Perform Computation
-    for (int i = 0; i < N; i++) {
-        B[i + start_idx] = A[i + start_idx]*D_shared[i];
-    }
-}
-
 void launch_gpu_matrix_scale(float* A_cpu, float* B_cpu, float* D_cpu) {
+    
     // Pointers for memory on the GPU
     float* A_gpu; 
     float* B_gpu; 
     float* D_gpu; 
 
     // Allocate memory on the GPU
-    cudaMalloc(&A_gpu, (n_rows*n_cols)*sizeof(float));
-    cudaMalloc(&B_gpu, (n_rows*n_cols)*sizeof(float));
-    cudaMalloc(&D_gpu, n_cols*sizeof(float));
+    cudaMalloc(&A_gpu, (N*N_cols)*sizeof(float));
+    cudaMalloc(&B_gpu, (N*N_cols)*sizeof(float));
+    cudaMalloc(&D_gpu, N_cols*sizeof(float));
 
     // Copy memory to the GPU
-    cudaMemcpy(A_gpu, A_cpu, n_rows*n_cols*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(B_gpu, B_cpu, n_rows*n_cols*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(D_gpu, D_cpu, n_cols*sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(A_gpu, A_cpu, (N*N_cols)*sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(B_gpu, B_cpu, (N*N_cols)*sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(D_gpu, D_cpu, N_cols*sizeof(float), cudaMemcpyHostToDevice);
 
     // Compute how much shared memory is needed
     int sharedMem = N_cols*sizeof(float);
@@ -50,17 +31,37 @@ void launch_gpu_matrix_scale(float* A_cpu, float* B_cpu, float* D_cpu) {
     dim3 num_blocks(n_rows/N, N_cols);
 
     // Invoke the CUDA kernel
-    matrix_scale_wrapped<<<num_blocks,threadsPerBlock,sharedMem>>>(A_gpu, B_gpu, D_gpu, n_rows, n_cols, N);
+    matrix_scale_wrapped<<<num_blocks, threadsPerBlock, sharedMem>>>(A_gpu, B_gpu, D_gpu, n_rows, n_cols, N);
 
     // Copy memory back to the CPU
-    cudaMemcpy(A_gpu, A_cpu, n_rows*n_cols*sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(B_gpu, B_cpu, n_rows*n_cols*sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(D_gpu, D_cpu, n_cols*sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(A_gpu, A_cpu, (N*N_cols)*sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(B_gpu, B_cpu, (N*N_cols)*sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(D_gpu, D_cpu, N_cols*sizeof(float), cudaMemcpyDeviceToHost);
 
     // Free memory on the GPU
     cudaFree(A_gpu);
     cudaFree(B_gpu);
     cudaFree(D_gpu);
+}
+
+__global__ void matrix_scale_wrapped(float* A, float* B, float* D, const int n_rows, const int n_cols, const int N) {
+    
+    // Shared memory for D
+    extern __shared__ float D_shared[];
+    
+    // Compute indices
+    int col = threadIdx.x + (blockDim.x*blockIdx.x);
+    int row = blockDim.y*blockIdx.x;
+    int index = row + col*N;
+
+    // Read from shared memory
+    D_shared[row] = D[row];
+    __syncthreads();
+    
+    // Perform Computation
+    if (row < n_rows && col < n_cols){
+        B[index] = A[index]*D_shared[row];
+    }
 }
 
 int main() {
