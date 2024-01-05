@@ -73,8 +73,8 @@ void wavefront520(double* data, int nx, int ny, int Nx, int Ny){
         I = -T_id;
         J = T_id;
 
-        // Loop over the wavefronts
-        while (w < num_wave){
+        // Loop over the spin-up and fully spun-up wavefronts
+        while (w < (num_wave - T_num)){
             
             // Compute bounds
             I_lb = std::max(0, w - (Nx - 1));
@@ -82,13 +82,16 @@ void wavefront520(double* data, int nx, int ny, int Nx, int Ny){
             I_ub = std::min(w, Nx - 1);
             J_ub = std::min(w, Ny - 1);
 
+            // Spin-up region
             if (w < T_num){
 
                 if ((I >= I_lb) && (I <= I_ub) && (J >= J_lb) && (J <= J_ub)){
                     
+                    /*
                     // debug print
                     msg << "T_id = " << T_id << " | (I, J) = (" << I << "," << J << ") | w = " << w << " | (I_lb, I_ub, J_lb, J_ub) = (" << I_lb << "," << I_ub << "," << J_lb << "," << J_ub << ")\n";
                     std::cout << msg.str();
+                    */
 
                     process_block(data, I, J, nx, ny, Nx, Ny);
                 }
@@ -97,13 +100,16 @@ void wavefront520(double* data, int nx, int ny, int Nx, int Ny){
 
                 #pragma omp barrier
                 
-            } else if ((w >= T_num) && (w < (num_wave - T_num))){
+            // Fully spun-up region
+            } else {
                   
                 while ((I >= I_lb) && (I <= I_ub) && (J >= J_lb) && (J <= J_ub)){
                     
+                    /*
                     // debug print
                     msg << "T_id = " << T_id << " | (I, J) = (" << I << "," << J << ") | w = " << w << " | (I_lb, I_ub, J_lb, J_ub) = (" << I_lb << "," << I_ub << "," << J_lb << "," << J_ub << ")\n";
                     std::cout << msg.str();
+                    */
 
                     process_block(data, I, J, nx, ny, Nx, Ny);
                     I -= T_num;
@@ -116,26 +122,35 @@ void wavefront520(double* data, int nx, int ny, int Nx, int Ny){
                     
                 #pragma omp barrier
                 
-            } else {
-                
-                if ((I >= I_lb) && (I <= I_ub) && (J >= J_lb) && (J <= J_ub)){
-                    
-                    // debug print
-                    msg << "T_id = " << T_id << " | (I, J) = (" << I << "," << J << ") | w = " << w << " | (I_lb, I_ub, J_lb, J_ub) = (" << I_lb << "," << I_ub << "," << J_lb << "," << J_ub << ")\n";
-                    std::cout << msg.str();
-
-                    process_block(data, I, J, nx, ny, Nx, Ny);
-                }
-                
-                w++;
-                J++;
-
-                // thread mapping is missing in spin-down
-                
-                #pragma omp barrier
-                
             }
-        } 
+        }
+
+        // Loop over the spin-down wavefronts
+        for (w = (num_wave - T_num); w < num_wave; w++){
+            
+            // Map thread ID to blocks
+            I = (Nx - 1) - T_id;
+            J = w - I;
+            
+            // Compute bounds
+            I_lb = std::max(0, w - (Nx - 1));
+            J_lb = std::max(0, w - (Ny - 1));
+            I_ub = std::min(w, Nx - 1);
+            J_ub = std::min(w, Ny - 1);
+                
+            if ((I >= I_lb) && (I <= I_ub) && (J >= J_lb) && (J <= J_ub)){
+                    
+                /*
+                // debug print
+                msg << "T_id = " << T_id << " | (I, J) = (" << I << "," << J << ") | w = " << w << " | (I_lb, I_ub, J_lb, J_ub) = (" << I_lb << "," << I_ub << "," << J_lb << "," << J_ub << ")\n";
+                std::cout << msg.str();
+                */
+
+                process_block(data, I, J, nx, ny, Nx, Ny);
+            }
+                
+            #pragma omp barrier
+        }
     }
 
 
